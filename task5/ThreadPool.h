@@ -67,19 +67,25 @@ public:
     }
   }
 
-  template<typename F>
-  auto add_task(F&& f) -> future<decltype(f())> {
-    function<decltype(f())()> func = bind(forward<F>(f));
-    auto task_ptr = make_shared<packaged_task<decltype(f())()>>(func);
+    template<typename F, typename...Args>
+    auto add_task(F&& f, Args&&... args) -> std::future<decltype(f(args...))> {
+        // Create a function with bounded parameters ready to execute
+        std::function<decltype(f(args...))()> func = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
+        // Encapsulate it into a shared ptr in order to be able to copy construct / assign
+        auto task_ptr = std::make_shared<std::packaged_task<decltype(f(args...))()>>(func);
 
-    function<void()> wrapper_func = [task_ptr]() {
-      (*task_ptr)();
-    };
+        // Wrap packaged task into void function
+        std::function<void()> wrapper_func = [task_ptr]() {
+            (*task_ptr)();
+        };
 
-    m_queue.enqueue(wrapper_func);
+        // Enqueue generic wrapper function
+        m_queue.enqueue(wrapper_func);
 
-    m_conditional_lock.notify_one();
+        // Wake up one thread if its waiting
+        m_conditional_lock.notify_one();
 
-    return task_ptr->get_future();
-  }
+        // Return future from promise
+        return task_ptr->get_future();
+    }
 };
