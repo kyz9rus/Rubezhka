@@ -185,36 +185,6 @@ void *addNode(ThinNode *pred, ThinList *list_copy) {
     pred_temp->next = newNode;
 }
 
-//ThinList *get_snapshot(ThinList *list) {
-//    ThinList *list_copy = init_list();
-//    ThinNode *pred, *curr;
-//
-//    lock(list->head->mutex);
-//    pred = list->head;
-//    curr = pred->next;
-//    lock(curr->mutex);
-//
-//    if (curr == list->tail) {
-//        unlock(list->head->mutex);
-//        unlock(curr->mutex);
-//
-//        return list_copy;
-//    }
-//
-//    while (curr != list->tail) {
-//        unlock(pred->mutex);
-//        pred = curr;
-//        curr = curr->next;
-//        lock(curr->mutex);
-//
-//        addNode(pred, list_copy);
-//    }
-//
-//    unlock(curr->mutex);
-//
-//    return list_copy;
-//}
-
 bool compareNodes(ThinNode *node1, ThinNode *node2) {
     if (node1->key == node2->key && node1->val == node2->val)
         return true;

@@ -44,6 +44,7 @@ int main(int argc, char **argv) {
         pthread_create(&writerTid, &attr, write, NULL);
 
         pthread_join(readerTid, NULL);
+        pthread_join(writerTid, NULL);
     }
 
     return 0;

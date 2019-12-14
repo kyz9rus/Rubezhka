@@ -11,21 +11,27 @@ typedef struct ThinTest {
     int high;
 } ThinTest;
 
-void *remove_test(void * data) {
-    ThinTest *test = (ThinTest*) data;
+void *remove_test(void *data) {
+    ThinTest *test = (ThinTest *) data;
 
-    for (int i = test->low; i < test->high; i++)
-        myRemove(list, i * 3);
+    for (int i = test->low; i < test->high; i += 3)
+        myRemove(list, i);
 }
 
 void *create_arr() {
-    for (int i = 1; i < 100; i++)
-        insert(list, i * 3, i);
+    for (int i = 0; i < 100; i += 3)
+        insert(list, i, i);
 }
 
 void *insert_test(void *data) {
-    ThinTest *test = (ThinTest*) data;
-    for (int i = test->low; i < test->high; i++)
+    ThinTest *test = (ThinTest *) data;
+    for (int i = test->low; i < test->high; i += 3)
+        insert(list, i, i);
+}
+
+void *insert_test_reverse(void *data) {
+    ThinTest *test = (ThinTest *) data;
+    for (int i = test->high; i > test->low; i -= 3)
         insert(list, i, i);
 }
 
@@ -55,33 +61,34 @@ void test() {
     thinTest3->high = 100;
     pthread_create(&thread3, NULL, remove_test, thinTest3);
 
-    pthread_join(thread1, NULL);
-    pthread_join(thread2, NULL);
-    pthread_join(thread3, NULL);
 
     ThinTest *thinTest4;
     thinTest4 = (ThinTest *) calloc(1, sizeof(ThinTest));
     thinTest4->low = 1;
-    thinTest4->high = 10;
+    thinTest4->high = 50;
     pthread_create(&thread4, NULL, insert_test, thinTest4);
 
     ThinTest *thinTest5;
     thinTest5 = (ThinTest *) calloc(1, sizeof(ThinTest));
-    thinTest5->low = 10;
-    thinTest5->high = 21;
-    pthread_create(&thread5, NULL, insert_test, thinTest5);
+    thinTest5->low = 50;
+    thinTest5->high = 99;
+    pthread_create(&thread5, NULL, insert_test_reverse, thinTest5);
+
+    pthread_join(thread1, NULL);
+    pthread_join(thread2, NULL);
+    pthread_join(thread3, NULL);
 
     pthread_join(thread4, NULL);
     pthread_join(thread5, NULL);
 
     {
-        for (int i = 1; i < 10; i++) {
+        for (int i = 1; i < 50; i += 3) {
             FindResult result = find(list, i);
             printf("%d ", i);
             assert(result.exists == 1);
         }
 
-        for (int i = 10; i < 21; i++) {
+        for (int i = 50; i < 100; i += 3) {
             FindResult result = find(list, i);
             printf("%d ", i);
             assert(result.exists == 1);

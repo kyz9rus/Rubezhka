@@ -4,7 +4,7 @@
 using namespace std;
 
 #define THREADS_COUNT 4
-#define MAX 200
+#define MAX 1000000
 int a[MAX];
 int part = 0;
 
@@ -75,25 +75,66 @@ int main() {
     pool.init();
 
     for (int & i : a) {
-        int num = rand() % 1000;
+        int num = rand() % MAX;
         i = num;
-        cout << i << " ";
+        //cout << i << " ";
     }
 
-    for (int i = 0; i < THREADS_COUNT; ++i) {
-        pool.add_task(merge_sort_threads);
+    {
+        auto start = std::chrono::system_clock::now();
+
+        for (int i = 0; i < THREADS_COUNT; ++i) {
+            pool.add_task(merge_sort_threads);
+        }
+
+
+        merge(0, (MAX / 2 - 1) / 2, MAX / 2 - 1);
+        merge(MAX / 2, MAX/2 + (MAX-1-MAX/2)/2, MAX - 1);
+        merge(0, (MAX - 1)/2, MAX - 1);
+
+        auto end = std::chrono::system_clock::now();
+
+        std::chrono::duration<double> elapsed_seconds = end - start;
+        std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+
+        std::cout << "finished computation at " << std::ctime(&end_time)
+                  << "elapsed time: " << elapsed_seconds.count() << "s\n";
+
     }
 
     pool.shutdown();
 
-    merge(0, (MAX / 2 - 1) / 2, MAX / 2 - 1);
-    merge(MAX / 2, MAX/2 + (MAX-1-MAX/2)/2, MAX - 1);
-    merge(0, (MAX - 1)/2, MAX - 1);
+    for (size_t i = 1; i < sizeof(a) / sizeof(a[0]); i++) {
+        assert(a[i - 1] <= a[i]);
+    }
+
+
+    {
+        auto start = std::chrono::system_clock::now();
+
+        merge_sort(0, MAX);
+
+        auto end = std::chrono::system_clock::now();
+
+        std::chrono::duration<double> elapsed_seconds = end - start;
+        std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+
+        std::cout << "finished computation at " << std::ctime(&end_time)
+                  << "elapsed time: " << elapsed_seconds.count() << "s\n";
+
+    }
+
+
+
+
 
     cout << "\n";
-    for (int i : a) {
-        cout << i << " ";
+    for (size_t i = 1; i < sizeof(a) / sizeof(a[0]); i++) {
+        assert(a[i - 1] <= a[i]);
     }
+//    for (int i : a) {
+//        cout << i << " ";
+//    }
     return 0;
 }
 
