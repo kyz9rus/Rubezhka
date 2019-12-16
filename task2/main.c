@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 ThinList *list;
 
@@ -36,7 +37,6 @@ void *insert_test_reverse(void *data) {
 }
 
 void test() {
-
     pthread_t create_thread;
     pthread_create(&create_thread, NULL, create_arr, NULL);
     pthread_join(create_thread, NULL);
@@ -70,7 +70,7 @@ void test() {
 
     ThinTest *thinTest5;
     thinTest5 = (ThinTest *) calloc(1, sizeof(ThinTest));
-    thinTest5->low = 50;
+    thinTest5->low = 51;
     thinTest5->high = 99;
     pthread_create(&thread5, NULL, insert_test_reverse, thinTest5);
 
@@ -88,13 +88,47 @@ void test() {
             assert(result.exists == 1);
         }
 
-        for (int i = 50; i < 100; i += 3) {
+        for (int i = 51; i < 100; i += 3) {
             FindResult result = find(list, i);
             printf("%d ", i);
             assert(result.exists == 1);
         }
 
         printf("\n");
+    }
+}
+
+void testSnapshot() {
+    list = init_list();
+
+    pthread_t insertThread;
+
+    ThinTest *thinTest;
+    thinTest = (ThinTest *) calloc(1, sizeof(ThinTest));
+    thinTest->low = 1;
+    thinTest->high = 50;
+
+    pthread_create(&insertThread, NULL, insert_test, thinTest);
+    pthread_join(insertThread, NULL);
+
+    thinTest = (ThinTest *) calloc(1, sizeof(ThinTest));
+    thinTest->low = 2;
+    thinTest->high = 50;
+    pthread_create(&insertThread, NULL, insert_test, thinTest);
+
+    sleep(1);
+
+    ThinList *resultList = get_snapshot(list);
+    pthread_join(insertThread, NULL);
+
+    for (int i = 1; i < 50; i += 3) {
+        FindResult result = find(resultList, i);
+        assert(result.exists == 1);
+    }
+
+    for (int i = 2; i < 50; i += 3) {
+        FindResult result = find(resultList, i);
+        assert(result.exists == 1);
     }
 }
 
@@ -152,5 +186,7 @@ int main() {
 
     for (int i = 0; i < 1000; i++)
         test();
+
+    testSnapshot();
 }
 
