@@ -36,4 +36,9 @@ public:
     m_queue.pop();
     return true;
   }
+
+  int size() {
+      unique_lock<mutex> lock(m_mutex);
+      return m_queue.size();
+  }
 };

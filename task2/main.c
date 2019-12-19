@@ -113,7 +113,7 @@ void testSnapshot() {
 
     thinTest = (ThinTest *) calloc(1, sizeof(ThinTest));
     thinTest->low = 2;
-    thinTest->high = 50;
+    thinTest->high = 5000;
     pthread_create(&insertThread, NULL, insert_test, thinTest);
 
     sleep(1);
@@ -126,7 +126,7 @@ void testSnapshot() {
         assert(result.exists == 1);
     }
 
-    for (int i = 2; i < 50; i += 3) {
+    for (int i = 2; i < 5000; i += 3) {
         FindResult result = find(resultList, i);
         assert(result.exists == 1);
     }
