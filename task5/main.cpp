@@ -5,7 +5,7 @@
 
 using namespace std;
 
-int THREADS_COUNT = 5;
+int THREADS_COUNT = 4;
 const int MAX = 1000000;
 int temp[MAX];
 int temp_curr_index = 0;
@@ -100,7 +100,7 @@ Interval init_bounds() {
 
     low = current_point;
     if (thread_counter < THREADS_COUNT)
-        high = (thread_counter * (MAX / THREADS_COUNT));
+        high = (thread_counter * (MAX / THREADS_COUNT)) - 1;
     else
         high = MAX - 1;
     current_point = high + 1;
@@ -176,50 +176,48 @@ void very_smart_merge_sort(int arr[]) {
 
     int part = (MAX / THREADS_COUNT) * 2;
     int low = 0,
-        high = part,
+        high = part - 1,
         mid = (high - low) / 2;
 
 //        print_arr(arr);
     list<future<void>> merging;
+    bool wait = false;
     while(true){
         merging.push_back(move(my_pool.add_task(merge, arr, low, mid, high)));
 //        merge(arr, low, mid, high);
-
 //        print_arr(arr);
 
-        // finish merge
-        if(high >= MAX - 1 && part >= MAX) {
+
+        // если мы дошли до конца круга
+        // и шаг меньше половины круга, что значит, что у нас осталось больше 2 частей для merge
+        if(high == MAX - 1 && part <= MAX / 2) {
+            for (it = merging.begin(); it != merging.end(); ++it)
+                if(it->valid())
+                    it->get();
+
+            part *= 2;
+            low = 0;
+            high = part - 1;
+            mid = (high - low) / 2;
+        }
+        // merged
+        else if(high == MAX - 1 && part > MAX / 2 - 1) {
+            for (it = merging.begin(); it != merging.end(); ++it)
+                if(it->valid())
+                    it->get();
+
             break;
         }
-        // finish circle
-        else if(high >= MAX - 1) {
+        // для нечетного числа частей
+        else if(high > MAX - part) {
             for (it = merging.begin(); it != merging.end(); ++it)
                 if(it->valid())
                     it->get();
 
-            if(part * 2 > MAX / 2) {
-                part = MAX;
-                mid = low - 1;
-                high = MAX - 1;
-                low = 0;
-            }
-            else {
-                part *= 2;
-                high = part;
-                low = 0;
-                mid = low + (high - low) / 2;
-            }
-
-        }
-        else if(high + part > MAX) {
-            for (it = merging.begin(); it != merging.end(); ++it)
-                if(it->valid())
-                    it->get();
-
-            mid = MAX - (MAX - high);
+            mid = high;
             high = MAX - 1;
         }
-        // merge in the circle
+        // сместить интервал merge
         else {
             low = high + 1;
             high += part;
