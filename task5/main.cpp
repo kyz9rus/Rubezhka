@@ -1,11 +1,12 @@
 #include <iostream>
 #include "ThreadPool.h"
 #include <mutex>
+#include <list>
 
 using namespace std;
 
-#define THREADS_COUNT 5
-#define MAX 100000
+int THREADS_COUNT = 5;
+const int MAX = 1000000;
 int temp[MAX];
 int temp_curr_index = 0;
 
@@ -14,7 +15,6 @@ int thread_counter = 1;
 ThreadPool my_pool(THREADS_COUNT);
 
 mutex bounds_mutex;
-mutex temp_mutex;
 
 typedef struct Interval {
     int low;
@@ -63,27 +63,6 @@ void merge_sort(int a[], int low, int high) {
     }
 }
 
-Interval init_bounds() {
-    int low, high;
-
-    low = current_point;
-    if (thread_counter < THREADS_COUNT)
-        high = (thread_counter * MAX / THREADS_COUNT) - 1;
-    else
-        high = MAX - 1;
-    current_point = high + 1;
-
-    thread_counter++;
-    cout << low << " " << high << endl;
-
-    Interval *interval;
-    interval = (Interval *) calloc(1, sizeof(Interval));
-    interval->low = low;
-    interval->high = high;
-
-    return *interval;
-}
-
 void is_sorted(int arr[]) {
     int errors = 0;
     int ids[10];
@@ -116,7 +95,28 @@ void is_sorted(int arr[]) {
     }
 }
 
-Interval merge_sort_threads(int a[]) {
+Interval init_bounds() {
+    int low, high;
+
+    low = current_point;
+    if (thread_counter < THREADS_COUNT)
+        high = (thread_counter * (MAX / THREADS_COUNT));
+    else
+        high = MAX - 1;
+    current_point = high + 1;
+
+    thread_counter++;
+//    cout << low << " " << high << endl;
+
+    Interval *interval;
+    interval = (Interval *) calloc(1, sizeof(Interval));
+    interval->low = low;
+    interval->high = high;
+
+    return *interval;
+}
+
+void merge_sort_threads(int a[]) {
     bounds_mutex.lock();
     Interval interval = init_bounds();
     bounds_mutex.unlock();
@@ -129,8 +129,6 @@ Interval merge_sort_threads(int a[]) {
         merge_sort(a, mid + 1, high);
         merge(a, low, mid, high);
     }
-
-    return interval;
 }
 
 int *init_arr(int arr[]) {
@@ -149,28 +147,85 @@ void copy(int arr[], int low, int high) {
     }
 }
 
+void print_arr(int arr[]) {
+    for (int i = 0; i < MAX; i++)
+        cout << arr[i] << " ";
+    cout << "\n";
+}
+
+// 1. sort all the parts separately
+// 2. merge pairs
+// 3. merge pairs of pairs
+
 void very_smart_merge_sort(int arr[]) {
+    // sort all parts separately
+    list<future<void>> sorting;
     for (int i = 0; i < THREADS_COUNT; i++) {
-        auto fut1 = my_pool.add_task(merge_sort_threads, arr);
-        auto fut2 = my_pool.add_task(merge_sort_threads, arr);
-
-        Interval interval1 = fut1.get();
-        Interval interval2 = fut2.get();
-
-        int low1 = interval1.low,
-                high1 = interval1.high,
-                mid1 = interval1.low + (interval1.high - interval1.low) / 2, //TODO: may be it is redundant
-                low2 = interval2.low,
-                high2 = interval2.high,
-                mid2 = interval2.low + (interval2.high - interval2.low) / 2;
-
-        if (low1 < low2) //TODO: merge pls!
-            merge(arr, low1, high1, high2);
-        else
-            merge(arr, low2, high2, high1);
+        sorting.push_back(move(my_pool.add_task(merge_sort_threads, arr)));
     }
 
-    my_pool.shutdown();
+    // wait for all parts to be sorted
+    _List_iterator<future<void>> it;
+    for (it = sorting.begin(); it != sorting.end(); ++it)
+        it->get();
+
+    if(THREADS_COUNT == 1){
+        merge(arr, 0, MAX / 2, MAX - 1);
+        return;
+    }
+
+    int part = (MAX / THREADS_COUNT) * 2;
+    int low = 0,
+        high = part,
+        mid = (high - low) / 2;
+
+//        print_arr(arr);
+    list<future<void>> merging;
+    while(true){
+        merging.push_back(move(my_pool.add_task(merge, arr, low, mid, high)));
+//        merge(arr, low, mid, high);
+
+//        print_arr(arr);
+
+        // finish merge
+        if(high >= MAX - 1 && part >= MAX) {
+            break;
+        }
+        // finish circle
+        else if(high >= MAX - 1) {
+            for (it = merging.begin(); it != merging.end(); ++it)
+                if(it->valid())
+                    it->get();
+
+            if(part * 2 > MAX / 2) {
+                part = MAX;
+                mid = low - 1;
+                high = MAX - 1;
+                low = 0;
+            }
+            else {
+                part *= 2;
+                high = part;
+                low = 0;
+                mid = low + (high - low) / 2;
+            }
+
+        }
+        else if(high + part > MAX) {
+            for (it = merging.begin(); it != merging.end(); ++it)
+                if(it->valid())
+                    it->get();
+
+            mid = MAX - (MAX - high);
+            high = MAX - 1;
+        }
+        // merge in the circle
+        else {
+            low = high + 1;
+            high += part;
+            mid = low + (high - low) / 2;
+        }
+    }
 }
 
 void show_computation_time(int arr[]) {
@@ -181,11 +236,6 @@ void show_computation_time(int arr[]) {
     auto end = chrono::system_clock::now();
     chrono::duration<double> elapsed_seconds = end - start;
     cout << "computation time: " << elapsed_seconds.count() << endl;
-}
-
-void print_arr() {
-    for (int i : temp)
-        cout << i << " ";
 }
 
 int main() {
