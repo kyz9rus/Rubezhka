@@ -181,7 +181,6 @@ void very_smart_merge_sort(int arr[]) {
 
 //        print_arr(arr);
     list<future<void>> merging;
-    bool wait = false;
     while(true){
         merging.push_back(move(my_pool.add_task(merge, arr, low, mid, high)));
 //        merge(arr, low, mid, high);
