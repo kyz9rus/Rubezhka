@@ -11,17 +11,28 @@
 
 using namespace std;
 
-static void * threadLoop(void *arg);
-
 class ThreadPool {
-private:
+public:
+    typedef struct T {
+        ThreadPool *pool;
+        int m_id;
+    } T;
+
+
     class ThreadWorker {
     private:
-        int m_id;
-        ThreadPool *m_pool;
+        static int m_id;
+        static ThreadPool *m_pool;
     public:
-        ThreadWorker(ThreadPool *pool, const int id)
-                : m_pool(pool), m_id(id) {
+        ThreadWorker(ThreadPool *pool, const int id) {
+            m_pool = pool;
+            m_id = id;
+        }
+
+        static void *initWorker(void *data) {
+            T *t = (T*)data;
+            m_pool = t->pool;
+            m_id = t->m_id;
         }
 
         void operator()() {
@@ -46,19 +57,12 @@ private:
 
     bool m_shutdown;
     ConcurrentQueue<function<void()>> m_queue;
-    // vector<thread> m_threads;
     vector<pthread_t> m_threads;
-    // mutex m_conditional_mutex;
     pthread_mutex_t m_conditional_mutex;
-//    pthread_mutex_t ThreadPool::m_conditional_mutex = PTHREAD_MUTEX_INITIALIZER;
-//    condition_variable m_conditional_lock;// = PTHREAD_MUTEX_INITIALIZER
     pthread_cond_t m_conditional_lock;
     pthread_attr_t attr;
-    //PTHREAD_COND_INITIALIZER
-
 public:
-    ThreadPool(const int n_threads)
-            // : m_threads(vector<thread>(n_threads)), m_shutdown(false) {
+    explicit ThreadPool(const int n_threads)
             : m_threads(vector<pthread_t>(n_threads)), m_shutdown(false) {
         pthread_cond_init(&m_conditional_lock, nullptr);
         pthread_mutex_init(&m_conditional_mutex, nullptr);
@@ -67,9 +71,13 @@ public:
 
     void init() {
         for (int i = 0; i < m_threads.size(); ++i) {
-            ThreadWorker threadWorker = *(ThreadWorker*)calloc(1, sizeof(ThreadWorker));
+            ThreadWorker t = ThreadWorker(nullptr, 0);
 
-            pthread_create(&m_threads[i], &attr, ThreadWorker(this, i), i);
+            T *tt = (T*) calloc(1, sizeof(T));
+            tt->pool = this;
+            tt->m_id = i;
+
+            pthread_create(&m_threads[i], &attr, t.initWorker, tt);
 //             m_threads[i] = thread(ThreadWorker(this, i));
         }
     }
@@ -82,9 +90,10 @@ public:
         pthread_mutex_unlock(&m_conditional_mutex);
 
         for (auto &m_thread : m_threads) {
-            if (m_thread.joinable()) {
-                pthread_join(&, &m_thread);
-            }
+            pthread_join(m_thread, nullptr);
+//            if (m_thread.joinable()) {
+//                pthread_join(&, &m_thread);
+//            }
         }
     }
 
@@ -112,8 +121,4 @@ public:
         // Return future from promise
         return task_ptr->get_future();
     }
-};
-
-void * ThreadPool:threadLoop(void *arg) {
-
 };
