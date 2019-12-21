@@ -6,10 +6,11 @@
 #include <pthread.h>
 
 
+
 using namespace std;
 
 int THREADS_COUNT = 2;
-const int MAX = 10000;
+const int MAX = 3;
 int temp[MAX];
 int temp_curr_index = 0;
 
@@ -86,19 +87,6 @@ void is_sorted(int arr[]) {
     if (errors != 0) {
         cout << "\nслучилось что-то не очень хорошее...(" << endl;
         cout << "errors: " << errors << endl << endl;
-
-        for (int i = 0; i < sizeof(ids) / sizeof(ids[0]); i++) {
-            if (ids[i] != 0) {
-                for (int j = -10; j < 10; j++) {
-                    if (j == i) {
-                        cout << ">>> [" << ids[i] + j << "]: " << arr[ids[i] + j] << endl;
-                    } else {
-                        cout << "[" << ids[i] + j << "]: " << arr[ids[i] + j] << endl;
-                    }
-                }
-                cout << endl;
-            }
-        }
     }
 }
 
@@ -270,6 +258,12 @@ int main() {
     free(arr);
 
     my_pool.shutdown();
+
+    //int* a = new int[2];
+    //a[0] = 1;
+    //a[1] = 0;
+    //is_sorted(a);
+
     return 0;
 }
 

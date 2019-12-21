@@ -2,58 +2,58 @@
 
 #include <functional>
 #include <future>
-// #include <mutex>
-// #include <thread>
 #include <utility>
 #include <vector>
 #include <pthread.h>
 #include "ConcurrentQueue.h"
 
+typedef void *(*THREADFUNC)(void *);
+
 using namespace std;
 
 class ThreadPool {
 public:
-    typedef struct T {
-        ThreadPool *pool;
-        int m_id;
-    } T;
-
-
     class ThreadWorker {
     private:
-        static int m_id;
-        static ThreadPool *m_pool;
+        int m_id;
+        ThreadPool *m_pool2;
+
     public:
-        ThreadWorker(ThreadPool *pool, const int id) {
-            m_pool = pool;
-            m_id = id;
-        }
 
-        static void *initWorker(void *data) {
-            T *t = (T*)data;
-            m_pool = t->pool;
-            m_id = t->m_id;
-        }
+//        void *initWorker(void* data) {
+//            new ThreadWorker();
+//        }
 
-        void operator()() {
+        void *initWorker(void *data) {
             function<void()> func;
             bool dequeued;
-            while (!m_pool->m_shutdown) {
+            while (!m_pool2->m_shutdown) {
                 {
-                    pthread_mutex_lock(&(m_pool->m_conditional_mutex));
+                    pthread_mutex_lock(&(m_pool2->m_conditional_mutex));
                     // unique_lock<mutex> lock(m_pool->m_conditional_mutex);
-                    if (m_pool->m_queue.empty()) {
-                        pthread_cond_wait(&(m_pool->m_conditional_lock), &(m_pool->m_conditional_mutex));
+                    if (m_pool2->m_queue.empty()) {
+                        pthread_cond_wait(&(m_pool2->m_conditional_lock), &(m_pool2->m_conditional_mutex));
                         // m_pool->m_conditional_lock.wait(lock);
                     }
-                    dequeued = m_pool->m_queue.dequeue(func);
+                    dequeued = m_pool2->m_queue.dequeue(func);
                 }
                 if (dequeued) {
                     func();
                 }
+                pthread_mutex_unlock(&(m_pool2->m_conditional_mutex));
             }
         }
+
+        ThreadWorker(ThreadPool *pPool, int i) {
+            m_pool2 = pPool;
+            m_id = i;
+        }
     };
+
+    typedef struct T {
+        ThreadPool *pool;
+        int m_id;
+    } T;
 
     bool m_shutdown;
     ConcurrentQueue<function<void()>> m_queue;
@@ -71,14 +71,15 @@ public:
 
     void init() {
         for (int i = 0; i < m_threads.size(); ++i) {
-            ThreadWorker t = ThreadWorker(nullptr, 0);
+            ThreadWorker t = ThreadWorker(this, i);
 
-            T *tt = (T*) calloc(1, sizeof(T));
+            T *tt = (T *) calloc(1, sizeof(T));
             tt->pool = this;
             tt->m_id = i;
 
-            pthread_create(&m_threads[i], &attr, t.initWorker, tt);
-//             m_threads[i] = thread(ThreadWorker(this, i));
+            auto w = new ThreadWorker(this, i);
+            pthread_create(&m_threads[i], &attr, (THREADFUNC) &ThreadWorker::initWorker, w);
+            //m_threads[i] = thread(ThreadWorker(this, i));
         }
     }
 
@@ -90,10 +91,7 @@ public:
         pthread_mutex_unlock(&m_conditional_mutex);
 
         for (auto &m_thread : m_threads) {
-            pthread_join(m_thread, nullptr);
-//            if (m_thread.joinable()) {
-//                pthread_join(&, &m_thread);
-//            }
+            pthread_join(m_thread, NULL);
         }
     }
 
@@ -113,7 +111,6 @@ public:
         m_queue.enqueue(wrapper_func);
 
         // Wake up one thread if its waiting
-        // m_conditional_lock.notify_one();
         pthread_mutex_lock(&m_conditional_mutex);
         pthread_cond_signal(&m_conditional_lock);
         pthread_mutex_unlock(&m_conditional_mutex);
