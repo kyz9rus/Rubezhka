@@ -2,12 +2,14 @@
 #include "ThreadPool.h"
 #include <mutex>
 #include <list>
- #include <algorithm>
+#include <algorithm>
+#include <pthread.h>
+
 
 using namespace std;
 
-int THREADS_COUNT = 4;
-const int MAX = 10000000;
+int THREADS_COUNT = 2;
+const int MAX = 10000;
 int temp[MAX];
 int temp_curr_index = 0;
 
@@ -15,7 +17,8 @@ int current_point;
 int thread_counter = 1;
 ThreadPool my_pool(THREADS_COUNT);
 
-mutex bounds_mutex;
+pthread_mutex_t posix_bounds_mutex = PTHREAD_MUTEX_INITIALIZER;
+// mutex bounds_mutex;
 
 typedef struct Interval {
     int low;
@@ -121,9 +124,11 @@ Interval init_bounds() {
 }
 
 void merge_sort_threads(int a[]) {
-    bounds_mutex.lock();
+    // bounds_mutex.lock();
+    pthread_mutex_lock( &posix_bounds_mutex );
     Interval interval = init_bounds();
-    bounds_mutex.unlock();
+    pthread_mutex_unlock( &posix_bounds_mutex );
+    // bounds_mutex.unlock();
 
     int low = interval.low, high = interval.high;
 
