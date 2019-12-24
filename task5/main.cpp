@@ -9,17 +9,14 @@
 
 using namespace std;
 
-int THREADS_COUNT = 2;
-const int MAX = 3;
-int temp[MAX];
-int temp_curr_index = 0;
+int THREADS_COUNT = 15;
+const int MAX = 15;
 
 int current_point;
 int thread_counter = 1;
 ThreadPool my_pool(THREADS_COUNT);
 
 pthread_mutex_t posix_bounds_mutex = PTHREAD_MUTEX_INITIALIZER;
-// mutex bounds_mutex;
 
 typedef struct Interval {
     int low;
@@ -91,20 +88,22 @@ void is_sorted(int arr[]) {
 }
 
 Interval init_bounds() {
-    int low, high;
+    int low, high = 0;
+    Interval *interval;
+    interval = (Interval *) calloc(1, sizeof(Interval));
 
     low = current_point;
+
     if (thread_counter < THREADS_COUNT)
         high = (thread_counter * (MAX / THREADS_COUNT)) - 1;
     else
         high = MAX - 1;
+
     current_point = high + 1;
 
     thread_counter++;
 //    cout << low << " " << high << endl;
 
-    Interval *interval;
-    interval = (Interval *) calloc(1, sizeof(Interval));
     interval->low = low;
     interval->high = high;
 
@@ -112,11 +111,13 @@ Interval init_bounds() {
 }
 
 void merge_sort_threads(int a[]) {
-    // bounds_mutex.lock();
     pthread_mutex_lock( &posix_bounds_mutex );
     Interval interval = init_bounds();
+
+    if(interval.low == -1 && interval.high == -1)
+        return;
+
     pthread_mutex_unlock( &posix_bounds_mutex );
-    // bounds_mutex.unlock();
 
     int low = interval.low, high = interval.high;
 
@@ -137,22 +138,11 @@ int *init_arr(int *arr) {
     return arr;
 }
 
-void copy(int arr[], int low, int high) {
-    for (int i = low; i <= high; i++) {
-        temp[temp_curr_index] = arr[i];
-        temp_curr_index++;
-    }
-}
-
 void print_arr(int arr[]) {
     for (int i = 0; i < MAX; i++)
         cout << arr[i] << " ";
     cout << "\n";
 }
-
-// 1. sort all the parts separately
-// 2. merge1 pairs
-// 3. merge1 pairs of pairs
 
 void very_smart_merge_sort(int arr[]) {
     // sort all parts separately
@@ -166,7 +156,7 @@ void very_smart_merge_sort(int arr[]) {
     for (it = sorting.begin(); it != sorting.end(); ++it)
         it->get();
 
-    if(THREADS_COUNT == 1){
+    if(THREADS_COUNT == 1 || MAX == 1){
         merge1(arr, 0, MAX / 2, MAX - 1);
         return;
     }
@@ -176,13 +166,11 @@ void very_smart_merge_sort(int arr[]) {
         high = part - 1,
         mid = (high - low) / 2;
 
-//        print_arr(arr);
+//    print_arr(arr);
     list<future<void>> merging;
     while(true){
         merging.push_back(move(my_pool.add_task(merge1, arr, low, mid, high)));
-//        merge1(arr, low, mid, high);
 //        print_arr(arr);
-
 
         // если мы дошли до конца круга
         // и шаг меньше половины круга, что значит, что у нас осталось больше 2 частей для merge1
@@ -220,6 +208,7 @@ void very_smart_merge_sort(int arr[]) {
             mid = low + (high - low) / 2;
         }
     }
+    merge1(arr, 0, MAX / 2, MAX - 1);
 }
 
 void show_computation_time(int arr[]) {
@@ -242,28 +231,31 @@ void show_computation_timestupid(int arr[]) {
     cout << "stupid computation time: " << elapsed_seconds.count() << endl;
 }
 
+void check_conditions(){
+    if(MAX < THREADS_COUNT){
+        cout << "количество потоков должно быть меньше чисел!! !" << endl;
+        cout << "но в принципе, могу и так..." << endl;
+        THREADS_COUNT = 1;
+    }
+}
+
 int main() {
     my_pool.init();
-
     int *arr;
     arr = (int *) malloc(MAX * sizeof(int));
+
+    check_conditions();
+
     init_arr(arr);
-
-
     show_computation_time(arr);
     is_sorted(arr);
+
     init_arr(arr);
     show_computation_timestupid(arr);
     is_sorted(arr);
+
     free(arr);
-
     my_pool.shutdown();
-
-    //int* a = new int[2];
-    //a[0] = 1;
-    //a[1] = 0;
-    //is_sorted(a);
-
     return 0;
 }
 

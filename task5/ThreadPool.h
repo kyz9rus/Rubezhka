@@ -19,21 +19,14 @@ public:
         ThreadPool *m_pool2;
 
     public:
-
-//        void *initWorker(void* data) {
-//            new ThreadWorker();
-//        }
-
         void *initWorker(void *data) {
             function<void()> func;
             bool dequeued;
             while (!m_pool2->m_shutdown) {
                 {
                     pthread_mutex_lock(&(m_pool2->m_conditional_mutex));
-                    // unique_lock<mutex> lock(m_pool->m_conditional_mutex);
                     if (m_pool2->m_queue.empty()) {
                         pthread_cond_wait(&(m_pool2->m_conditional_lock), &(m_pool2->m_conditional_mutex));
-                        // m_pool->m_conditional_lock.wait(lock);
                     }
                     dequeued = m_pool2->m_queue.dequeue(func);
                 }
@@ -79,7 +72,6 @@ public:
 
             auto w = new ThreadWorker(this, i);
             pthread_create(&m_threads[i], &attr, (THREADFUNC) &ThreadWorker::initWorker, w);
-            //m_threads[i] = thread(ThreadWorker(this, i));
         }
     }
 
@@ -97,25 +89,19 @@ public:
 
     template<typename F, typename...Args>
     auto add_task(F &&f, Args &&... args) -> std::future<decltype(f(args...))> {
-        // Create a function with bounded parameters ready to execute
         std::function<decltype(f(args...))()> func = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
-        // Encapsulate it into a shared ptr in order to be able to copy construct / assign
         auto task_ptr = std::make_shared<std::packaged_task<decltype(f(args...))()>>(func);
 
-        // Wrap packaged task into void function
         std::function<void()> wrapper_func = [task_ptr]() {
             (*task_ptr)();
         };
 
-        // Enqueue generic wrapper function
         m_queue.enqueue(wrapper_func);
 
-        // Wake up one thread if its waiting
         pthread_mutex_lock(&m_conditional_mutex);
         pthread_cond_signal(&m_conditional_lock);
         pthread_mutex_unlock(&m_conditional_mutex);
 
-        // Return future from promise
         return task_ptr->get_future();
     }
 };
