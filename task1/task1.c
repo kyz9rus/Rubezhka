@@ -8,9 +8,15 @@
 
 static RoughNode *create_node(int, int);
 
-
 char insertImpl(RoughList *list, int key, int value);
 
+/**
+ * THis method inserts item to the list and captures mutex
+ * @param list
+ * @param key
+ * @param value
+ * @return
+ */
 char insert(RoughList *list, int key, int value) {
     char result = 1;
 
@@ -21,6 +27,13 @@ char insert(RoughList *list, int key, int value) {
     return result;
 }
 
+/**
+ * This method just inserts item to the list
+ * @param list
+ * @param key
+ * @param value
+ * @return
+ */
 char insertImpl(RoughList *list, int key, int value) {
     RoughNode *pred, *curr;
     RoughNode *newNode;
@@ -79,6 +92,12 @@ FindResult find(RoughList *list, int key) {
     return res;
 }
 
+/**
+ * This is custom method, which creates empty node
+ * @param key
+ * @param val
+ * @return
+ */
 static RoughNode *create_node(const int key, const int val) {
     RoughNode *node;
 
@@ -91,6 +110,12 @@ static RoughNode *create_node(const int key, const int val) {
     return node;
 }
 
+/**
+ * "myRemove" - because library <stdlib.h> has remove method -> conflict
+ * @param list
+ * @param key
+ * @return
+ */
 char myRemove(RoughList *list, int key) {
     RoughNode *pred, *curr;
     char res = 1;
@@ -118,6 +143,10 @@ char myRemove(RoughList *list, int key) {
     return res;
 }
 
+/**
+ * This is custom method, which initializes the list
+ * @return
+ */
 RoughList *init_list(void) {
     RoughList *list;
 
@@ -143,6 +172,12 @@ RoughList *init_list(void) {
     return list;
 }
 
+/**
+ * Stupid copying list by using insertIpl method
+ * @param list
+ * @param list_copy
+ * @return
+ */
 RoughList *copyList(RoughList *list, RoughList *list_copy) {
     RoughNode *curr = list->head;
 
@@ -156,6 +191,11 @@ RoughList *copyList(RoughList *list, RoughList *list_copy) {
     return list_copy;
 }
 
+/**
+ * This method creates snapshot
+ * @param list
+ * @return
+ */
 RoughList *get_snapshot(RoughList *list) {
     lock(list->mtx);
 

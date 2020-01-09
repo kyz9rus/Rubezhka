@@ -5,8 +5,6 @@
 #include <algorithm>
 #include <pthread.h>
 
-
-
 using namespace std;
 
 int THREADS_COUNT = 15;
@@ -64,10 +62,14 @@ void merge_sort(int a[], int low, int high) {
         merge_sort(a, low, mid);
         merge_sort(a, mid + 1, high);
 
-        merge1(a, low, mid,  high);
+        merge1(a, low, mid, high);
     }
 }
 
+/**
+ * Checks that arr is sorted
+ * @param arr
+ */
 void is_sorted(int arr[]) {
     int errors = 0;
     int ids[10];
@@ -87,6 +89,11 @@ void is_sorted(int arr[]) {
     }
 }
 
+/**
+ * This method set bounds of elemetns in array to sort (for each thread)
+ * For example, we have 3 threads and 15 elements. First thread is coming and get low - 0, high - 5, second thread gets {6, 10}...
+ * @return
+ */
 Interval init_bounds() {
     int low, high = 0;
     Interval *interval;
@@ -111,13 +118,13 @@ Interval init_bounds() {
 }
 
 void merge_sort_threads(int a[]) {
-    pthread_mutex_lock( &posix_bounds_mutex );
+    pthread_mutex_lock(&posix_bounds_mutex); // use mutex only for initialize bounds
     Interval interval = init_bounds();
 
-    if(interval.low == -1 && interval.high == -1)
+    if (interval.low == -1 && interval.high == -1)
         return;
 
-    pthread_mutex_unlock( &posix_bounds_mutex );
+    pthread_mutex_unlock(&posix_bounds_mutex);
 
     int low = interval.low, high = interval.high;
 
@@ -129,6 +136,11 @@ void merge_sort_threads(int a[]) {
     }
 }
 
+/**
+ * Fill array with random values from 0 to MAX
+ * @param arr
+ * @return
+ */
 int *init_arr(int *arr) {
     for (int i = 0; i < MAX; i++) {
         int num = rand() % MAX;
@@ -147,36 +159,37 @@ void print_arr(int arr[]) {
 void very_smart_merge_sort(int arr[]) {
     // sort all parts separately
     list<future<void>> sorting;
-    for (int i = 0; i < THREADS_COUNT; i++) {
+    for (int i = 0; i < THREADS_COUNT; i++) { // fill list of futures with our tasks
         sorting.push_back(move(my_pool.add_task(merge_sort_threads, arr)));
     }
 
     // wait for all parts to be sorted
-    _List_iterator<future<void>> it;
+    _List_iterator <future<void>> it;
     for (it = sorting.begin(); it != sorting.end(); ++it)
         it->get();
 
-    if(THREADS_COUNT == 1 || MAX == 1){
+    // do merging if only 1 thread or 1 element
+    if (THREADS_COUNT == 1 || MAX == 1) {
         merge1(arr, 0, MAX / 2, MAX - 1);
         return;
     }
 
     int part = (MAX / THREADS_COUNT) * 2;
     int low = 0,
-        high = part - 1,
-        mid = (high - low) / 2;
+            high = part - 1,
+            mid = (high - low) / 2;
 
 //    print_arr(arr);
     list<future<void>> merging;
-    while(true){
+    while (true) {
         merging.push_back(move(my_pool.add_task(merge1, arr, low, mid, high)));
 //        print_arr(arr);
 
         // если мы дошли до конца круга
         // и шаг меньше половины круга, что значит, что у нас осталось больше 2 частей для merge1
-        if(high == MAX - 1 && part <= MAX / 2) {
+        if (high == MAX - 1 && part <= MAX / 2) {
             for (it = merging.begin(); it != merging.end(); ++it)
-                if(it->valid())
+                if (it->valid())
                     it->get();
 
             part *= 2;
@@ -184,24 +197,24 @@ void very_smart_merge_sort(int arr[]) {
             high = part - 1;
             mid = (high - low) / 2;
         }
-        // merged
-        else if(high == MAX - 1 && part > MAX / 2 - 1) {
+            // merged
+        else if (high == MAX - 1 && part > MAX / 2 - 1) {
             for (it = merging.begin(); it != merging.end(); ++it)
-                if(it->valid())
+                if (it->valid())
                     it->get();
 
             break;
         }
-        // для нечетного числа частей
-        else if(high > MAX - part) {
+            // для нечетного числа частей
+        else if (high > MAX - part) {
             for (it = merging.begin(); it != merging.end(); ++it)
-                if(it->valid())
+                if (it->valid())
                     it->get();
 
             mid = high;
             high = MAX - 1;
         }
-        // сместить интервал merge1
+            // сместить интервал merge1
         else {
             low = high + 1;
             high += part;
@@ -211,6 +224,10 @@ void very_smart_merge_sort(int arr[]) {
     merge1(arr, 0, MAX / 2, MAX - 1);
 }
 
+/**
+ * Shows computation time
+ * @param arr
+ */
 void show_computation_time(int arr[]) {
     auto start = chrono::system_clock::now();
 
@@ -221,18 +238,22 @@ void show_computation_time(int arr[]) {
     cout << "computation time: " << elapsed_seconds.count() << endl;
 }
 
+/**
+ * This is stupid sort (with 1 thread)
+ * @param arr
+ */
 void show_computation_timestupid(int arr[]) {
     auto start = chrono::system_clock::now();
 
-     sort(arr, arr + MAX);
+    sort(arr, arr + MAX);
 
     auto end = chrono::system_clock::now();
     chrono::duration<double> elapsed_seconds = end - start;
     cout << "stupid computation time: " << elapsed_seconds.count() << endl;
 }
 
-void check_conditions(){
-    if(MAX < THREADS_COUNT){
+void check_conditions() {
+    if (MAX < THREADS_COUNT) {
         cout << "количество потоков должно быть меньше чисел!! !" << endl;
         cout << "но в принципе, могу и так..." << endl;
         THREADS_COUNT = 1;
@@ -247,7 +268,7 @@ int main() {
     check_conditions();
 
     init_arr(arr);
-    show_computation_time(arr);
+    show_computation_time(arr); //our sorting
     is_sorted(arr);
 
     init_arr(arr);
@@ -258,5 +279,3 @@ int main() {
     my_pool.shutdown();
     return 0;
 }
-
-

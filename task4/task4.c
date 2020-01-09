@@ -3,6 +3,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/**
+ * This method from the Internet. Don't know how it works
+ * @param addr
+ * @param oldp
+ * @param newp
+ * @return
+ */
 cas(volatile pointer_t *addr, pointer_t oldp, const pointer_t newp) {
     char result;
     __asm__ __volatile__("lock; cmpxchg16b %0; setz %1":"=m"(*addr),
@@ -112,6 +119,10 @@ bool dequeue(ConcurrentQueue *q, int *val) {
     return true;
 }
 
+/**
+ * This method just prints queue
+ * @param q
+ */
 void show_queue(ConcurrentQueue *q) {
     node_t *curr;
 

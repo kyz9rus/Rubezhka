@@ -171,6 +171,12 @@ ThinList *init_list(void) {
     return NULL;
 }
 
+/**
+ * The same logic as insert method, I think. TODO: Need to refactoring
+ * @param pred
+ * @param list_copy
+ * @return
+ */
 void *addNode(ThinNode *pred, ThinList *list_copy) {
     ThinNode *pred_temp = list_copy->head,
             *curr_temp = pred_temp->next,
@@ -185,6 +191,12 @@ void *addNode(ThinNode *pred, ThinList *list_copy) {
     pred_temp->next = newNode;
 }
 
+/**
+ * Like equals in Java
+ * @param node1
+ * @param node2
+ * @return
+ */
 bool compareNodes(ThinNode *node1, ThinNode *node2) {
     if (node1->key == node2->key && node1->val == node2->val)
         return true;
@@ -192,6 +204,12 @@ bool compareNodes(ThinNode *node1, ThinNode *node2) {
         return false;
 }
 
+/**
+ * Stupid copying list by using addNode method
+ * @param list
+ * @param list_copy
+ * @return
+ */
 ThinList *copyList(ThinList *list, ThinList *list_copy) {
     ThinNode *curr = list->head;
 
@@ -205,18 +223,24 @@ ThinList *copyList(ThinList *list, ThinList *list_copy) {
     return list_copy;
 }
 
+/**
+ * Returns snapshot. This method tries to copy list until every element in result list
+ * doesn't compare with element in target list
+ * @param list
+ * @return
+ */
 ThinList *get_snapshot(ThinList *list) {
     ThinList *list_copy = init_list();
     ThinNode *curr, *curr_temp_copy;
 
-    list_copy = copyList(list, list_copy);
+    list_copy = copyList(list, list_copy); //stupid copying list
 
     curr = list->head;
     curr_temp_copy = list_copy->head;
 
     while (curr->next != list->tail) {
-        if (!compareNodes(curr, curr_temp_copy)) {
-            list_copy = copyList(list, list_copy);
+        if (!compareNodes(curr, curr_temp_copy)) {  //if nodes in copied list and target list are different
+            list_copy = copyList(list, list_copy);  //coping again
 
             curr = list->head;
             curr_temp_copy = list_copy->head;

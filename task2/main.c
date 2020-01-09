@@ -38,7 +38,7 @@ void *insert_test_reverse(void *data) {
 
 void test() {
     pthread_t create_thread;
-    pthread_create(&create_thread, NULL, create_arr, NULL);
+    pthread_create(&create_thread, NULL, create_arr, NULL); // thread inserts elements to the list with step 3
     pthread_join(create_thread, NULL);
 
     pthread_t thread1, thread2, thread3, thread4, thread5;
@@ -47,32 +47,32 @@ void test() {
     thinTest1 = (ThinTest *) calloc(1, sizeof(ThinTest));
     thinTest1->low = 0;
     thinTest1->high = 32;
-    pthread_create(&thread1, NULL, remove_test, thinTest1);
+    pthread_create(&thread1, NULL, remove_test, thinTest1); // thread removes elements from 0 to 32 with step 3
 
     ThinTest *thinTest2;
     thinTest2 = (ThinTest *) calloc(1, sizeof(ThinTest));
     thinTest2->low = 32;
     thinTest2->high = 65;
-    pthread_create(&thread2, NULL, remove_test, thinTest2);
+    pthread_create(&thread2, NULL, remove_test, thinTest2); // thread removes elements from 32 to 65 with step 3
 
     ThinTest *thinTest3;
     thinTest3 = (ThinTest *) calloc(1, sizeof(ThinTest));
     thinTest3->low = 65;
     thinTest3->high = 100;
-    pthread_create(&thread3, NULL, remove_test, thinTest3);
+    pthread_create(&thread3, NULL, remove_test, thinTest3); // thread removes elements from 65 to 100 with step 3
 
 
     ThinTest *thinTest4;
     thinTest4 = (ThinTest *) calloc(1, sizeof(ThinTest));
     thinTest4->low = 1;
     thinTest4->high = 50;
-    pthread_create(&thread4, NULL, insert_test, thinTest4);
+    pthread_create(&thread4, NULL, insert_test, thinTest4); // thread inserts elements from 1 to 50 with step 3
 
     ThinTest *thinTest5;
     thinTest5 = (ThinTest *) calloc(1, sizeof(ThinTest));
     thinTest5->low = 51;
     thinTest5->high = 99;
-    pthread_create(&thread5, NULL, insert_test_reverse, thinTest5);
+    pthread_create(&thread5, NULL, insert_test_reverse, thinTest5);// thread inserts elements from 99 to 51 with step 3
 
     pthread_join(thread1, NULL);
     pthread_join(thread2, NULL);
@@ -82,13 +82,13 @@ void test() {
     pthread_join(thread5, NULL);
 
     {
-        for (int i = 1; i < 50; i += 3) {
+        for (int i = 1; i < 50; i += 3) {   // checks that inserted elements are exist (after thread 4)
             FindResult result = find(list, i);
             printf("%d ", i);
             assert(result.exists == 1);
         }
 
-        for (int i = 51; i < 100; i += 3) {
+        for (int i = 51; i < 100; i += 3) { // checks that inserted elements are exist (after thread 5)
             FindResult result = find(list, i);
             printf("%d ", i);
             assert(result.exists == 1);
@@ -108,25 +108,26 @@ void testSnapshot() {
     thinTest->low = 1;
     thinTest->high = 50;
 
-    pthread_create(&insertThread, NULL, insert_test, thinTest);
+    pthread_create(&insertThread, NULL, insert_test, thinTest); // thread inserts elements from 1 to 50 with step 3
     pthread_join(insertThread, NULL);
 
     thinTest = (ThinTest *) calloc(1, sizeof(ThinTest));
     thinTest->low = 2;
     thinTest->high = 5000;
-    pthread_create(&insertThread, NULL, insert_test, thinTest);
+    pthread_create(&insertThread, NULL, insert_test, thinTest); // thread inserts elements from 2 to 5000 with step 3
 
-    sleep(1);
+    sleep(1); // sleep 1 second
 
-    ThinList *resultList = get_snapshot(list);
+    ThinList *resultList = get_snapshot(list); // try to get snapshot, but inserting to the target list is not finished.
+    // It allows to check correct working of get_snapshot method
     pthread_join(insertThread, NULL);
 
-    for (int i = 1; i < 50; i += 3) {
+    for (int i = 1; i < 50; i += 3) { // checks that inserted elements are exist
         FindResult result = find(resultList, i);
         assert(result.exists == 1);
     }
 
-    for (int i = 2; i < 5000; i += 3) {
+    for (int i = 2; i < 5000; i += 3) { // checks that inserted elements are exist
         FindResult result = find(resultList, i);
         assert(result.exists == 1);
     }
@@ -134,7 +135,7 @@ void testSnapshot() {
 
 int main() {
     list = init_list();
-    insert(list, 1, 2);
+    insert(list, 1, 2); // easy tests from teacher side
     {
         FindResult result = find(list, 1);
         assert(result.exists == 1);
@@ -176,7 +177,7 @@ int main() {
         assert(result.exists == 0);
     }
 
-    insert(list, 0, 1);
+    insert(list, 0, 1); //stupid test with snapshot. may delete?
     insert(list, 1, 2);
     insert(list, 2, 3);
     insert(list, 3, 4);
@@ -187,6 +188,6 @@ int main() {
     for (int i = 0; i < 1000; i++)
         test();
 
-    testSnapshot();
+    testSnapshot(); // smart test with snapshot
 }
 

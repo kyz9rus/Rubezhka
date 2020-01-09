@@ -6,12 +6,12 @@ ConcurrentQueue *q;
 pthread_t readerTid, writerTid;
 pthread_attr_t attr;
 
-void *read(void* data) {
+void *read(void *data) {
     for (int i = 0; i < 100; i++)
         show_queue(q);
 }
 
-void *write(void* data) {
+void *write(void *data) {
     for (int i = 0; i < 100; i++)
         enqueue(q, i);
 }
@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
 
     free_queue(q);
 
-    {
+    {   // assure that reading and writing performed simultaneously
         q = init_queue();
 
         pthread_attr_init(&attr);

@@ -2,7 +2,7 @@
 #include <stdbool.h>
 
 typedef struct _pointer_t {
-    int count;
+    int count; // contains number of nodes
     struct _node_t *ptr;
 } pointer_t;
 
@@ -13,7 +13,7 @@ typedef struct _node_t {
 
 typedef struct ConcurrentQueue {
     pointer_t head;
-    pointer_t tail;
+    pointer_t tail; // fictitious element. Just to show end of the queue
 } ConcurrentQueue;
 
 struct ConcurrentQueue *init_queue(void);

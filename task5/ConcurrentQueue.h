@@ -6,10 +6,10 @@
 
 using namespace std;
 
-template <typename T>
+template <typename T> // This is template (like generic in Java, but instead T can be inserted primitive types (like char, int and so on)
 class ConcurrentQueue {
 private:
-  queue<T> m_queue;
+  queue<T> m_queue; // standard implementation of queue
   mutex m_mutex;
 public:
   ConcurrentQueue() = default;
@@ -35,10 +35,5 @@ public:
     
     m_queue.pop();
     return true;
-  }
-
-  int size() {
-      unique_lock<mutex> lock(m_mutex);
-      return m_queue.size();
   }
 };
